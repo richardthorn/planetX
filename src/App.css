@@ -10,7 +10,7 @@
   position: absolute;
   top: 0px;
   left: 900px;
-  height: 800px;
+  height: 840px;
   width: 300px;
   background-color: white;
   z-index: 40;
@@ -56,6 +56,50 @@
   left: 0px;
   top: 0px;
 }
+
+.pub-modal {
+  height: 200px;
+  width: 600px;
+  margin: auto;
+  background: white;
+}
+
+.pub-check-modal {
+  width: 600px;
+  margin: auto;
+  background: white;
+}
+
+.pub-disabled {
+  height: 35px;
+  width: 100%;
+  background: black;
+  margin-bottom: 5px;
+  font-size: 30px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.pub-selected {
+  height: 35px;
+  width: 100%;
+  color: black;
+  margin-bottom: 5px;
+  font-size: 30px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.pub-unselected {
+  height: 35px;
+  width: 100%;
+  background: black;
+  margin-bottom: 5px;
+  font-size: 30px;
+  font-weight: 900;
+  text-align: center;
+}
+
 
 /*.inner-sky {*/
 /*  height: 700px;*/
@@ -202,6 +246,12 @@
   height: 30px;
   width: 30px;
   margin: 8px 5px;
+  display: flex;
+}
+
+.paperMultiSquare {
+  height: 28px;
+  width: 28px;
 }
 
 .label {
