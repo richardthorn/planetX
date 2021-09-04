@@ -1,6 +1,7 @@
 import './App.css';
 import React from "react";
 import Modal from '@material-ui/core/Modal';
+import TextField from '@material-ui/core/TextField';
 
 
 class App extends React.Component{
@@ -12,8 +13,8 @@ class App extends React.Component{
 			publications.push([[], [], [], []]);
 			confirmed[i] = null;
 		};
-		let code = 'R6T3';
-		let season = 'Spring';
+		let code = 'Y6F7';
+		let season = 'Winter';
 		let globalRotation;
 		switch (season) {
 			case 'Fall':
@@ -44,10 +45,12 @@ class App extends React.Component{
 			publicPublish: [],
 			confirmed: confirmed,
 			season: season,
-			globalRotation: globalRotation,
+			openSettingsModal: false,
 			code: code,
+			globalRotation: globalRotation,
 			prevMove: {visibleStart: 0, player: null, position: 0},
 		};
+		this.endGame = this.endGame.bind(this);
 		this.setSeason = this.setSeason.bind(this);
 		this.setCode = this.setCode.bind(this);
 		this.openPubModal = this.openPubModal.bind(this);
@@ -67,8 +70,25 @@ class App extends React.Component{
 		this.renderPubReviewModal = this.renderPubReviewModal.bind(this);
 	}
 
+	endGame() {
+		let all = [...Array(18).keys()];
+		this.setState({publicPublish: all, renderPubReviewModal: true});
+	}
+
 	setSeason(season) {
 		this.setState({season: season});
+	}
+
+	setCode(code) {
+		this.setState({code: code});
+	}
+
+	openSettingsModal() {
+		this.setState({settingsModalOpen: true});
+	}
+
+	closeSettingsModal() {
+		this.setState({settingsModalOpen: false});
 	}
 
 	setCode(code) {
@@ -201,7 +221,7 @@ class App extends React.Component{
 
 	startGame() {
 		let players = [];
-		let playerNames = ['Julie', 'Richard', 'Bert', 'Trevor'];
+		let playerNames = ['Julie', 'Richard', 'Bert', 'Matt'];
 		let colors = [
 			'#3ec0e2',
 			'#e23e64',
@@ -234,7 +254,7 @@ class App extends React.Component{
 	showPieces() {
 		let pieces = [];
 		this.state.players.forEach((player) => {
-			let transform = 'rotate(' + (360/this.state.skySize * (player.position - (player.queue + 1)/(this.state.players.length + 1)) + this.state.globalRotation) + 'deg) translateY(-385px)';
+			let transform = 'rotate(' + (360/this.state.skySize * (player.position - (1 - (player.queue + 1)/(this.state.players.length + 1))) + this.state.globalRotation) + 'deg) translateY(-385px)';
 			pieces.push(<div className={'piece'} style={{background: player.color, transform: transform}}/>);
 		});
 		return pieces;
@@ -304,30 +324,34 @@ class App extends React.Component{
 	}
 
 	renderSidebar() {
+
+		let playerDivs = [];
+		this.state.players.forEach((player) => {
+			playerDivs.push(<div className={'section'} style={{color: player.color}}
+				onClick={() => {this.movePiece(1, player.id);}}>{player.name}</div>);
+		});
+
 		if(this.state.pubRounds > 0){
 			let contents = [];
 			contents.push(<div className={'section'} style={{color: 'white'}}>Publications Phase</div>);
 			contents.push(<div className={'section'}/>);
 			contents.push(<div className={'section'} style={{color: 'white'}} onClick={() => this.publish()}>Finish Publication</div>);
-			for(let i = 0; i < 14; i++) {
+			for(let i = 0; i < 8; i++) {
 				contents.push(<div className={'section'}/>)
 			}
-			contents.push(<div className={'section'} style={{color: 'white'}}>Season</div>);
-			contents.push(<div className={'section'} style={{color: 'white'}}>{this.state.season}</div>);
-			contents.push(<div className={'section'} style={{color: 'white'}}>Game Code</div>);
-			contents.push(<div className={'section'} style={{color: 'white'}}>{this.state.code}</div>);
+			contents.push(<div className={'section'} style={{ color: 'white'}}>Players</div>);
+			playerDivs.forEach((div) => contents.push(div));
+			contents.push(<div className={'section'}/>);
+			contents.push(<div className={'section'} style={{color: 'white'}} onClick={() => this.openSeasonModal()}>Season</div>);
+			contents.push(<div className={'section'} style={{color: 'white'}} onClick={() => this.openSeasonModal()}>{this.state.season}</div>);
+			contents.push(<div className={'section'} style={{color: 'white'}} onClick={() => this.openCodeModal()}>Game Code</div>);
+			contents.push(<div className={'section'} style={{color: 'white'}} onClick={() => this.openCodeModal()}>{this.state.code}</div>);
 			return (
 				<div className="side-box">
 					{contents}
 				</div>
 			);
 		}
-		let playerDivs = [];
-
-		this.state.players.forEach((player) => {
-			playerDivs.push(<div className={'section'} style={{color: player.color}}
-				onClick={() => {this.movePiece(1, player.id);}}>{player.name}</div>);
-		});
 
 		let currentColor = (this.state.currentPlayer && this.state.currentPlayer.color) ? this.state.currentPlayer.color : 'black';
 		let visStart = (this.state.visibleStart === 0) ? 18 : this.state.visibleStart;
@@ -356,7 +380,7 @@ class App extends React.Component{
 				<div className={'section'} style={{color: 'white'}}>{this.state.season}</div>
 				<div className={'section'} style={{color: 'white'}}>Game Code</div>
 				<div className={'section'} style={{color: 'white'}}>{this.state.code}</div>
-				{/*<div className={'section'} style={{color: 'white'}} onClick={() => undo()}>Undo</div>*/}
+				<div className={'section'} style={{color: 'white'}} onClick={() => this.endGame()}>Final Scoring</div>
 			</div>
 		);
 	}
@@ -428,7 +452,7 @@ class App extends React.Component{
 			checkDivs.push(<div style={{height: '36px', width: '100%', marginBottom: '4px', background: 'black', color: 'white', display: 'flex'}}>
 				<div style={{width: '40px'}}>{sector + 1}</div>
 				<div style={{border: '1px solid white', margin: '2px', display: 'flex'}}>
-					{makeDiv(sector, 'A', 'Astroid')}
+					{makeDiv(sector, 'A', 'Asteroid')}
 					{makeDiv(sector, 'C', 'Comet')}
 					{makeDiv(sector, 'D', 'Dwarf')}
 					{makeDiv(sector, 'G', 'Gas Cloud')}
@@ -447,8 +471,23 @@ class App extends React.Component{
 			</Modal>
 		);
 	}
-	// renderSeasonModal() {
+	// renderSettingsModal() {
+	// 	let playerDivs = [];
+	// 	let seasonDivs = [];
+	// 	let seasons = ['Summer', 'Fall', 'Winter', 'Spring'];
+	// 	let players = this.state.players;
+	// 	let onNameChange = (name, i) => {
+	// 		if(name && name.length) {
 	//
+	// 		}
+	// 	};
+	// 	let onSeasonChange = (season) => {this.setState({season: season});}
+	// 	for(let i = 0; i < 4; i++) {
+	// 		playerDivs.push(<div className={'input-player-name'}>
+	// 			<TextField/>
+	// 		</div>);
+	// 		seasonDivs.push(<div onClick={}>{seasons[i]}</div>)
+	// 	}
 	// }
 
 	render() {
