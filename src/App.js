@@ -16,6 +16,12 @@ class App extends React.Component{
 		let code = 'Y6F7';
 		let season = 'Winter';
 		let globalRotation;
+		let colors = [
+			'#3ec0e2',
+			'#e23e64',
+			'#a93ee2',
+			'#e2b43e',
+		];
 		switch (season) {
 			case 'Fall':
 				globalRotation = 270;
@@ -32,6 +38,7 @@ class App extends React.Component{
 				break;
 		}
 		this.state = {
+			playerCount: 0,
 			players: [],
 			currentPlayer: null,
 			skySize: 18,
@@ -49,11 +56,17 @@ class App extends React.Component{
 			code: code,
 			globalRotation: globalRotation,
 			prevMove: {visibleStart: 0, player: null, position: 0},
+			playerPubs: [],
+			colors: colors,
 		};
 		this.endGame = this.endGame.bind(this);
 		this.setSeason = this.setSeason.bind(this);
+		this.setPlayerCount = this.setPlayerCount.bind(this);
+		this.setPlayerName = this.setPlayerName.bind(this);
 		this.setCode = this.setCode.bind(this);
+		this.togglePub = this.togglePub.bind(this);
 		this.openPubModal = this.openPubModal.bind(this);
+		this.closeSettingsModal = this.closeSettingsModal.bind(this);
 		this.closePubModal = this.closePubModal.bind(this);
 		this.closePubReviewModal = this.closePubReviewModal.bind(this);
 		this.playerNameToColor = this.playerNameToColor.bind(this);
@@ -63,10 +76,12 @@ class App extends React.Component{
 		this.createLabels = this.createLabels.bind(this);
 		this.movePiece = this.movePiece.bind(this);
 		this.renderSidebar = this.renderSidebar.bind(this);
+		this.renderPubBar = this.renderPubBar.bind(this);
 		this.renderVisible = this.renderVisible.bind(this);
 		this.publish = this.publish.bind(this);
 		this.confirmPub = this.confirmPub.bind(this);
 		this.renderPubModal = this.renderPubModal.bind(this);
+		this.renderSettingsModal = this.renderSettingsModal.bind(this);
 		this.renderPubReviewModal = this.renderPubReviewModal.bind(this);
 	}
 
@@ -75,12 +90,40 @@ class App extends React.Component{
 		this.setState({publicPublish: all, renderPubReviewModal: true});
 	}
 
-	setSeason(season) {
-		this.setState({season: season});
+	setCode(event) {
+		this.setState({code: event.target.value});
 	}
 
-	setCode(code) {
-		this.setState({code: code});
+	setPlayerCount(i) {
+		let players = this.state.players;
+		let playerPubs = this.state.playerPubs;
+		if(i < players.length) {
+			this.setState({playerCount: i, players: players.slice(0,i), playerPubs: playerPubs.slice(0,i)});
+		}else{
+			for(let j = players.length; j < i; j++){
+				let player = {id: j, color: this.state.colors[j], name: 'player_'+j, position: 1};
+				player.queue = this.findCurrentQueue(players, player.id, player.position);
+				players.push(player);
+				playerPubs.push({name: 'player_'+j, color: player.color, pubs: new Array(14).fill(true)});
+			}
+			this.shuffleArray(players);
+			for(let j = 0; j < i; j++) {
+				players[j].color = this.state.colors[j];
+				players[j].queue = j;
+				playerPubs[j].name = players[j].name;
+				playerPubs[j].color = players[j].color;
+			}
+			this.setState({players: players, playerCount: players.length, currentPlayer: players[0], playerPubs: playerPubs});
+		}
+
+	}
+
+	setPlayerName(i, name) {
+		let players = this.state.players;
+		let playerPubs = this.state.playerPubs;
+		players[i].name = name;
+		playerPubs[i].name = name;
+		this.setState({players: players, playerPubs: playerPubs});
 	}
 
 	openSettingsModal() {
@@ -91,8 +134,24 @@ class App extends React.Component{
 		this.setState({settingsModalOpen: false});
 	}
 
-	setCode(code) {
-		this.setState({code: code});
+	setSeason(season) {
+		let globalRotation = 0;
+		switch (season) {
+			case 'Fall':
+				globalRotation = 270;
+				break;
+			case 'Winter':
+				globalRotation = 180;
+				break;
+			case 'Spring':
+				globalRotation = 90;
+				break;
+			case 'Summer':
+			default:
+				globalRotation = 0;
+				break;
+		}
+		this.setState({season: season, globalRotation: globalRotation});
 	}
 
 	openPubModal(sector, round) {
@@ -116,6 +175,12 @@ class App extends React.Component{
 		})
 		queue += 1;
 		return queue;
+	}
+
+	togglePub(i, j) {
+		let pubs = this.state.playerPubs;
+		pubs[i].pubs[j] = !pubs[i].pubs[j];
+		this.setState({playerPubs: pubs});
 	}
 
 	findCurrentPlayer(players, visibleStart) {
@@ -222,6 +287,7 @@ class App extends React.Component{
 	startGame() {
 		let players = [];
 		let playerNames = ['Julie', 'Richard', 'Bert', 'Matt'];
+		let playerPubs = [];
 		let colors = [
 			'#3ec0e2',
 			'#e23e64',
@@ -233,8 +299,9 @@ class App extends React.Component{
 			let player = {id: i, color: colors[i], name: playerName, position: 1};
 			player.queue = this.findCurrentQueue(players, player.id, player.position);
 			players.push(player);
+			playerPubs.push({name: playerName, color: player.color, pubs: new Array(14).fill(true)});
 		});
-		this.setState({players: players, currentPlayer: players[0]});
+		this.setState({players: players, playerCount: players.length, currentPlayer: players[0], playerPubs: playerPubs});
 	}
 
 	movePlayer(playerId, distance) {
@@ -336,16 +403,9 @@ class App extends React.Component{
 			contents.push(<div className={'section'} style={{color: 'white'}}>Publications Phase</div>);
 			contents.push(<div className={'section'}/>);
 			contents.push(<div className={'section'} style={{color: 'white'}} onClick={() => this.publish()}>Finish Publication</div>);
-			for(let i = 0; i < 8; i++) {
+			for(let i = 0; i < 18; i++) {
 				contents.push(<div className={'section'}/>)
 			}
-			contents.push(<div className={'section'} style={{ color: 'white'}}>Players</div>);
-			playerDivs.forEach((div) => contents.push(div));
-			contents.push(<div className={'section'}/>);
-			contents.push(<div className={'section'} style={{color: 'white'}} onClick={() => this.openSeasonModal()}>Season</div>);
-			contents.push(<div className={'section'} style={{color: 'white'}} onClick={() => this.openSeasonModal()}>{this.state.season}</div>);
-			contents.push(<div className={'section'} style={{color: 'white'}} onClick={() => this.openCodeModal()}>Game Code</div>);
-			contents.push(<div className={'section'} style={{color: 'white'}} onClick={() => this.openCodeModal()}>{this.state.code}</div>);
 			return (
 				<div className="side-box">
 					{contents}
@@ -373,13 +433,13 @@ class App extends React.Component{
 					{/*<div className={'section'} style={{color: 'white'}} onClick={() => this.movePiece(5, this.state.currentPlayer.id)}> New Game </div>*/}
 				</div>
 				<div className={'section'}/>
-				<div className={'section'} style={{ color: 'white'}}>Players</div>
+				<div className={'section'} style={{ color: 'white'}}>Penalty</div>
 				{playerDivs}
 				<div className={'section'}/>
-				<div className={'section'} style={{color: 'white'}}>Season</div>
-				<div className={'section'} style={{color: 'white'}}>{this.state.season}</div>
-				<div className={'section'} style={{color: 'white'}}>Game Code</div>
-				<div className={'section'} style={{color: 'white'}}>{this.state.code}</div>
+				<div className={'section'} style={{color: 'white'}} onClick={() => this.openSettingsModal()}>Season</div>
+				<div className={'section'} style={{color: 'white'}} onClick={() => this.openSettingsModal()}>{this.state.season}</div>
+				<div className={'section'} style={{color: 'white'}} onClick={() => this.openSettingsModal()}>Game Code</div>
+				<div className={'section'} style={{color: 'white'}} onClick={() => this.openSettingsModal()}>{this.state.code}</div>
 				<div className={'section'} style={{color: 'white'}} onClick={() => this.endGame()}>Final Scoring</div>
 			</div>
 		);
@@ -417,7 +477,7 @@ class App extends React.Component{
 				playerDivs.push(<div className={'pub-unselected'} style={{color: player.color}} onClick={()=>addStagePlayer(this.state.activePubSector, this.state.activePubRound, player.name)}>{player.name}</div>)
 			}
 		});
-		let content = <div className={'pub-modal'}>
+		let content = <div style={{width: '100%', height: '100%'}}>
 			<div className={'pub-unselected'} style={{color: 'white'}}>{'Publications for Sector ' + (this.state.activePubSector+1) + '.' + (this.state.activePubRound)}</div>
 			{playerDivs}
 		</div>;
@@ -425,6 +485,7 @@ class App extends React.Component{
 			<Modal
 				open={this.state.pubModalOpen}
 				onClose={this.closePubModal}
+				className={'pub-modal'}
 			  >
 				{content}
 		    </Modal>
@@ -461,34 +522,93 @@ class App extends React.Component{
 			</div>);
 		});
 		let height = (40 * this.state.publicPublish.length) + 'px';
-		let content = <div className={'pub-check-modal'} style={{height: height}}>{checkDivs}</div>
+		let content = <div style={{height: '100%', width: '100%'}}>{checkDivs}</div>
 		return (
 			<Modal
 				open={this.state.publicPublish.length}
 				onClose={this.closePubReviewModal}
+				className={'pub-check-modal'}
+				style={{height: height}}
 			>
 				{content}
 			</Modal>
 		);
 	}
-	// renderSettingsModal() {
-	// 	let playerDivs = [];
-	// 	let seasonDivs = [];
-	// 	let seasons = ['Summer', 'Fall', 'Winter', 'Spring'];
-	// 	let players = this.state.players;
-	// 	let onNameChange = (name, i) => {
-	// 		if(name && name.length) {
-	//
-	// 		}
-	// 	};
-	// 	let onSeasonChange = (season) => {this.setState({season: season});}
-	// 	for(let i = 0; i < 4; i++) {
-	// 		playerDivs.push(<div className={'input-player-name'}>
-	// 			<TextField/>
-	// 		</div>);
-	// 		seasonDivs.push(<div onClick={}>{seasons[i]}</div>)
-	// 	}
-	// }
+
+	renderPubBar() {
+		let allPlayerDivs = [];
+		let things = ['A', 'A', 'A', 'A', 'C', 'C', 'D', 'D', 'D', 'D', 'G', 'G', 'Scan', 'Scan'];
+		this.state.playerPubs.forEach((player, i) => {
+			let playerDivs = [];
+			player.pubs.forEach((on, j) => {
+				let width = (things[j] === 'Scan') ? '128px' : '40px';
+				let style = (on) ? {background: player.color, color: 'black', width: width, fontWeight: 800} :
+					{background: 'black', color: player.color, width: width, fontWeight: 400};
+				playerDivs.push(<div className={'player-pub-square'} style={style} onClick={() => this.togglePub(i, j)}>{things[j]}</div>);
+			});
+			allPlayerDivs.push(
+				<div className={'section'}>
+					<div style={{color: player.color}}>{player.name}</div>
+					<div style={{display: 'flex', flexWrap: 'wrap', margin: '4px'}}>
+						{playerDivs}
+					</div>
+				</div>
+			)
+		});
+		return(
+			<div className={'pub-box'}>
+				{allPlayerDivs}
+			</div>
+		);
+	}
+	renderSettingsModal() {
+		// let colors = [
+		// 	'#e23e64',
+		// 	'#a93ee2',
+		// 	'#3ec0e2',
+		// 	'#e2b43e',
+		// ];
+		let playerDivs = [];
+		let seasonDivs = [];
+		let playerCountDivs = [];
+		seasonDivs.push(<div className={'settings-season-box'}>Season: </div>);
+		playerCountDivs.push(<div className={'settings-season-box'}>Players: </div>);
+		let seasons = ['Summer', 'Fall', 'Winter', 'Spring'];
+		seasons.forEach((season, i) => {
+			let seasonStyle = (season === this.state.season) ? {background: this.state.colors[i], color: 'black', fontWeight: 800} :
+					{background: 'black', color: this.state.colors[i], fontWeight: 400};
+			seasonDivs.push(<div className={'settings-season-box'} style={seasonStyle} onClick={() => this.setSeason(season)}>{season}</div>);
+			let countStyle = ((i+1) === this.state.playerCount) ? {background: this.state.colors[i], color: 'black', fontWeight: 800} :
+					{background: 'black', color: this.state.colors[i], fontWeight: 400};
+			playerCountDivs.push(<div className={'settings-season-box'} style={countStyle} onClick={() => this.setPlayerCount(i+1)}>{i+1}</div>);
+		});
+		for(let i = 0; i < this.state.playerCount; i++) {
+			playerDivs.push(
+				<input type="text" className={'settings-player-text'} style={{background: this.state.players[i].color}} name={'player-'+i} onChange={(e) => this.setPlayerName(i, e.target.value)} value={this.state.players[i].name}/>
+			);
+		}
+
+		return (
+			<Modal
+				open={this.state.settingsModalOpen}
+				onClose={this.closeSettingsModal}
+				className={'settings-modal'}
+			  >
+				<div style={{width: '100%', height: '100%'}}>
+					<div style={{width: '100%', textAlign: 'center', color: 'white', fontSize: '30px', fontWeight: '900', marginBottom: '15px'}}>Settings</div>
+					<div className={'settings-season'}>
+						<div className={'settings-season-box'}>Code: </div>
+						<input type="text" className={'settings-code-text'} name="code" onChange={(e) => this.setCode(e)} value={this.state.code}/>
+					</div>
+					<div className={'settings-season'}>{seasonDivs}</div>
+					<div className={'settings-season'}>{playerCountDivs}</div>
+					<div className={'settings-season'}>{playerDivs}</div>
+
+				</div>
+
+		    </Modal>
+		);
+	}
 
 	render() {
 		if(!this.state.currentPlayer){
@@ -498,18 +618,18 @@ class App extends React.Component{
 			<div className="back">
 				{this.renderPubModal()}
 				{this.renderPubReviewModal()}
+				{this.renderSettingsModal()}
+				{this.renderPubBar()}
 				<div id={'sky'} className="sky">
 					{this.showPieces()}
 					{this.renderVisible()}
-					{/*{this.createLabels()}*/}
 					<div className="inner-sky">
 						<div className='middle'/>
 						<div className='center'/>
 						{this.createSlices(this.state.skySize)}
 					</div>
 				</div>
-					{this.renderSidebar()}
-				<div className={'blank'}/>
+				{this.renderSidebar()}
 			</div>
 		);
 	}
